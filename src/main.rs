@@ -3,11 +3,8 @@ use input::{
     Libinput, LibinputInterface,
     event::{
         Event,
-        PointerEvent::{Button, Motion, ScrollFinger, ScrollWheel},
-        gesture::{
-            GestureEvent::{Hold, Pinch, Swipe},
-            GestureHoldEvent::Begin,
-        },
+        PointerEvent::{Button, Motion, ScrollFinger},
+        gesture::{GestureEvent::Hold, GestureHoldEvent::Begin},
         keyboard::{KeyState, KeyboardEventTrait},
         pointer::{Axis, ButtonState, PointerScrollEvent},
     },
@@ -35,6 +32,9 @@ impl LibinputInterface for Interface {
         drop(File::from(fd));
     }
 }
+
+const UNITS_PER_METER_MOUSE: f64 = 1000.0 / 0.0254;
+const UNITS_PER_METER_SCROLL: f64 = 96.0 / 0.0254;
 
 struct Events {
     keypress: Arc<AtomicUsize>,
@@ -71,6 +71,12 @@ fn main() {
                 events_clone.mouse_distance.load(Ordering::Relaxed),
                 events_clone.scroll_distance.load(Ordering::Relaxed)
             );
+            events_clone.keypress.store(0, Ordering::Relaxed);
+            events_clone.mouse_right.store(0, Ordering::Relaxed);
+            events_clone.mouse_left.store(0, Ordering::Relaxed);
+            events_clone.mouse_middle.store(0, Ordering::Relaxed);
+            events_clone.mouse_distance.store(0.0, Ordering::Relaxed);
+            events_clone.scroll_distance.store(0.0, Ordering::Relaxed);
         }
     });
 
@@ -104,24 +110,26 @@ fn main() {
                         }
                     }
                     Motion(pointer_motion_event) => {
-                        let _ = events.mouse_distance.fetch_add(
-                            pointer_motion_event.dx().abs() + pointer_motion_event.dy().abs(),
-                            Ordering::Relaxed,
-                        );
+                        let distance = (pointer_motion_event.dx().abs()
+                            + pointer_motion_event.dy().abs())
+                            / UNITS_PER_METER_MOUSE;
+                        let _ = events.mouse_distance.fetch_add(distance, Ordering::Relaxed);
                     }
-                    ScrollWheel(pointer_scroll_event) => {
-                        // 120 :- one unit of scrolling (thank you windows)
-                        println!(
-                            "{:?}",
-                            pointer_scroll_event.scroll_value_v120(Axis::Vertical) / 120 as f64
-                        );
-                    }
+                    //ScrollWheel(pointer_scroll_event) => {
+                    //    // 120 :- one unit of scrolling (thank you windows)
+                    //    println!(
+                    //        "{:?}",
+                    //        pointer_scroll_event.scroll_value_v120(Axis::Vertical) / 120 as f64
+                    //    );
+                    //}
                     ScrollFinger(pointer_finger_event) => {
-                        let _ = events.scroll_distance.fetch_add(
-                            pointer_finger_event.scroll_value(Axis::Vertical)
-                                + pointer_finger_event.scroll_value(Axis::Horizontal),
-                            Ordering::Relaxed,
-                        );
+                        println!("{:?}", pointer_finger_event.scroll_value(Axis::Vertical));
+                        let distance = (pointer_finger_event.scroll_value(Axis::Vertical).abs()
+                            + pointer_finger_event.scroll_value(Axis::Horizontal).abs())
+                            / UNITS_PER_METER_SCROLL;
+                        let _ = events
+                            .scroll_distance
+                            .fetch_add(distance, Ordering::Relaxed);
                     }
                     _ => {}
                 },
@@ -129,7 +137,7 @@ fn main() {
                     // NOTE: we ball with only right click as right click and left click as a
                     // gestue are mixed up
                     Hold(hold_event) => match hold_event {
-                        Begin(hold_begin_event) => {
+                        Begin(_) => {
                             let _ = events.mouse_right.fetch_add(1, Ordering::Relaxed);
                         }
                         _ => {}
