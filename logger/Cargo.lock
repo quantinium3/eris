@@ -39,16 +39,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "613afe47fcd5fac7ccf1db93babcb082c5994d996f20b8b159f2ad1658eb5724"
 
 [[package]]
-name = "eris"
-version = "0.1.0"
-dependencies = [
- "atomic_float",
- "evdev",
- "input",
- "libc",
-]
-
-[[package]]
 name = "evdev"
 version = "0.13.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -123,6 +113,16 @@ name = "log"
 version = "0.4.28"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "34080505efa8e45a4b816c349525ebe327ceaa8559756f0356cba97ef3bf7432"
+
+[[package]]
+name = "logger"
+version = "0.1.0"
+dependencies = [
+ "atomic_float",
+ "evdev",
+ "input",
+ "libc",
+]
 
 [[package]]
 name = "nix"
